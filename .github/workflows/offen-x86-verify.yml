@@ -30,7 +30,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          upstream_master="$(git fetch --no-tags --depth=256 https://github.com/NixOS/nixpkgs master && git rev-parse FETCH_HEAD)"
+          upstream_master="$(git fetch --no-tags --filter=tree:0 --shallow-since='2026-02-01' https://github.com/NixOS/nixpkgs master && git rev-parse FETCH_HEAD)"
           merge_base="$(git merge-base HEAD "$upstream_master")"
 
           printf 'UPSTREAM_MASTER=%s\n' "$upstream_master"

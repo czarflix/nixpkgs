@@ -40,6 +40,8 @@ jobs:
             sh -lc '
           set -euo pipefail
 
+          git config --global --add safe.directory /work
+
           pkg=$(nix --extra-experimental-features nix-command build \
             --impure \
             --print-out-paths \

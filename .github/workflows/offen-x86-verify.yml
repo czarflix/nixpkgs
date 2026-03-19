@@ -26,15 +26,15 @@ jobs:
           printf 'RUNNER_ARCH=%s\n' "$arch"
           test "$arch" = "x86_64"
 
-      - name: Prime upstream ancestry for nixpkgs-review
+      - name: Unshallow repository for nixpkgs-review
         run: |
           set -euo pipefail
 
-          upstream_master="$(git fetch --no-tags --filter=tree:0 --shallow-since='2026-02-01' https://github.com/NixOS/nixpkgs master && git rev-parse FETCH_HEAD)"
-          merge_base="$(git merge-base HEAD "$upstream_master")"
+          git fetch --no-tags --filter=tree:0 --unshallow origin "$GITHUB_REF_NAME"
+          shallow="$(git rev-parse --is-shallow-repository)"
 
-          printf 'UPSTREAM_MASTER=%s\n' "$upstream_master"
-          printf 'MERGE_BASE=%s\n' "$merge_base"
+          printf 'IS_SHALLOW=%s\n' "$shallow"
+          test "$shallow" = "false"
 
       - name: Build Offen and run smoke test
         run: |

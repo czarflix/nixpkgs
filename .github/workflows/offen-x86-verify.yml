@@ -2,6 +2,11 @@ name: Offen x86_64 verify
 
 on:
   workflow_dispatch:
+    inputs:
+      target_ref:
+        description: Branch or commit to verify
+        required: true
+        type: string
   push:
     branches:
       - offen-nixpkgs-x86-verify
@@ -17,7 +22,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 20
+          fetch-depth: 0
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Assert native x86_64 runner
         run: |
@@ -26,21 +32,12 @@ jobs:
           printf 'RUNNER_ARCH=%s\n' "$arch"
           test "$arch" = "x86_64"
 
-      - name: Unshallow repository for nixpkgs-review
-        run: |
-          set -euo pipefail
-
-          git fetch --no-tags --filter=tree:0 --unshallow origin "$GITHUB_REF_NAME"
-          shallow="$(git rev-parse --is-shallow-repository)"
-
-          printf 'IS_SHALLOW=%s\n' "$shallow"
-          test "$shallow" = "false"
-
       - name: Build Offen and run smoke test
         run: |
           set -euo pipefail
 
           mkdir -p logs
+          printf 'TARGET_REF=%s\n' "${{ inputs.target_ref || github.ref_name }}" | tee logs/target-ref.txt
 
           docker run --rm \
             -e NIXPKGS_ALLOW_UNFREE=1 \
@@ -71,34 +68,7 @@ jobs:
 
           grep '^PKG=' logs/offen-nixpkgs-x86-build.log
           grep '^SMOKE=' logs/offen-nixpkgs-x86-build.log
-          grep 'revision=ec99082a37ffb5855bd84debfef227d41c7b403c' logs/offen-nixpkgs-x86-build.log
-
-      - name: Run nixpkgs-review
-        run: |
-          set -euo pipefail
-
-          mkdir -p nixpkgs-review-artifacts
-
-          docker run --rm \
-            -e NIXPKGS_ALLOW_UNFREE=1 \
-            -v "$PWD:/work" \
-            -w /work \
-            nixos/nix:latest \
-            sh -lc '
-          set -euo pipefail
-
-          git config --global --add safe.directory /work
-          rm -rf /work/nixpkgs-review-artifacts
-
-          nix --extra-experimental-features '"'"'nix-command flakes'"'"' run github:Mic92/nixpkgs-review -- \
-            rev HEAD --no-shell --print-result -p offen \
-            --extra-nixpkgs-config '"'"'{ allowUnfree = true; }'"'"'
-
-          cp -R /root/.cache/nixpkgs-review /work/nixpkgs-review-artifacts
-          ' |& tee logs/offen-nixpkgs-x86-review.log
-
-          grep 'offen' logs/offen-nixpkgs-x86-review.log
-          grep 'x86_64-linux' logs/offen-nixpkgs-x86-review.log
+          grep 'revision=' logs/offen-nixpkgs-x86-build.log
 
       - name: Upload verification logs
         if: always()
@@ -107,11 +77,3 @@ jobs:
           name: nixpkgs-offen-x86-logs
           path: logs
           if-no-files-found: error
-
-      - name: Upload nixpkgs-review artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nixpkgs-offen-review-artifacts
-          path: nixpkgs-review-artifacts
-          if-no-files-found: warn

@@ -5721,6 +5721,12 @@
     github = "cything";
     githubId = 45041772;
   };
+  czarflix = {
+    name = "Ayaan Ahmad";
+    email = "ahmadayaan00@gmail.com";
+    github = "czarflix";
+    githubId = 89711008;
+  };
   d-brasher = {
     github = "d-brasher";
     githubId = 175485311;
